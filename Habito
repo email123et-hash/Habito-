@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habito - Habit Tracker</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.2);
+            --success: #22c55e;
+            --nav-bg: rgba(30, 41, 59, 0.85);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 100px; }
+        header { text-align: center; padding: 20px 15px 10px; }
+        header h1 { font-size: 1.8rem; letter-spacing: 1px; color: var(--accent); }
+        header p { font-size: 0.85rem; color: var(--text-muted); }
+        
+        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Dashboard Styles */
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .stat-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-box h3 { font-size: 1.4rem; color: var(--success); }
+        .stat-box p { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* Habit Grids */
+        .habit-table-container { overflow-x: auto; margin-top: 10px; }
+        .habit-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        .habit-table th, .habit-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+        .habit-table th:first-child, .habit-table td:first-child { text-align: left; width: 160px; font-weight: 500; }
+        .day-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--success); }
+
+        /* AI Assistant Style */
+        .chat-box { height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; margin-bottom: 15px; }
+        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
+        .chat-bubble.ai { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent-glow); align-self: flex-start; color: var(--text-main); }
+        .chat-bubble.user { background: var(--success); color: #fff; align-self: flex-end; }
+        .chat-input-area { display: flex; gap: 8px; }
+        .chat-input-area input { flex: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; color: #fff; outline: none; }
+        .chat-input-area button { background: var(--accent); border: none; padding: 0 16px; border-radius: 8px; font-weight: bold; color: #0f172a; cursor: pointer; }
+
+        /* Floating Nav Bar */
+        .floating-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--nav-bg); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 6px; padding: 8px 12px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1000; }
+        .nav-item { background: transparent; border: none; color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: 0.3s; white-space: nowrap; }
+        .nav-item.active { background: var(--accent); color: #0f172a; font-weight: 600; box-shadow: 0 4px 12px var(--accent-glow); }
+
+        /* Reminder Notification Banner */
+        #reminder-banner { display: none; background: #ef4444; color: #fff; padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 500; border-radius: 8px; margin-bottom: 12px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>HABITO</h1>
+        <p>Aapki Personal Progress Partner</p>
+    </header>
+
+    <div class="container">
+        <!-- Reminder Warning Banner -->
+        <div id="reminder-banner">⚠️ Alert: Aapke aaj ke kuch tasks pending hain! Unhe complete karein.</div>
+
+        <!-- 1. DASHBOARD -->
+        <div id="dashboard" class="section active">
+            <div class="card">
+                <h2>Overview Dashboard</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">October 2026 Tracking Summary</p>
+                <div class="stats-grid" style="margin-top: 15px;">
+                    <div class="stat-box">
+                        <h3 id="completion-rate">0%</h3>
+                        <p>Completion Rate</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="pending-count">0</h3>
+                        <p>Pending Habits</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. DAILY HABITS -->
+        <div id="daily" class="section">
+            <div class="card">
+                <h2>Daily Habits Grid (31 Days)</h2>
+                <div class="habit-table-container">
+                    <table class="habit-table" id="daily-table">
+                        <thead>
+                            <tr>
+                                <th>Habit Name</th>
+                                <!-- Days 1 to 31 headers generated via script -->
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. WEEKLY HABITS -->
+        <div id="weekly" class="section">
+            <div class="card">
+                <h2>Weekly Targets</h2>
+                <div id="weekly-list" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Weekly items populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ANALYTICS -->
+        <div id="analytics" class="section">
+            <div class="card">
+                <h2>Performance Analytics</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">Aapka consistency graph aur progress stats yahan show honge.</p>
+            </div>
+        </div>
+
+        <!-- 5. AI ASSISTANT -->
+        <div id="ai" class="section">
+            <div class="card">
+                <h2>Habito AI Assistant</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Apne habits aur routine ke baare me kuch bhi poochein.</p>
+                <div class="chat-box" id="chat-box">
+                    <div class="chat-bubble ai">Hello! Main Habito AI hoon. Aapke aaj ke habits kaise chal rahe hain? Koi madad chahiye?</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Kuchh poochein...">
+                    <button onclick="sendAIExtMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. NOTES -->
+        <div id="notes" class="section">
+            <div class="card">
+                <h2>Monthly Notes & Goals</h2>
+                <textarea id="user-notes" style="width: 100%; height: 150px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 10px; margin-top: 10px; outline: none;" placeholder="Apne goals ya notes yahan likhein..." oninput="saveNotes()"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Bottom Navigation Bar -->
+    <nav class="floating-nav">
+        <button class="nav-item active" onclick="switchTab('dashboard', this)">Dashboard</button>
+        <button class="nav-item" onclick="switchTab('daily', this)">Daily</button>
+        <button class="nav-item" onclick="switchTab('weekly', this)">Weekly</button>
+        <button class="nav-item" onclick="switchTab('analytics', this)">Stats</button>
+        <button class="nav-item" onclick="switchTab('ai', this)">AI 🤖</button>
+        <button class="nav-item" onclick="switchTab('notes', this)">Notes</button>
+    </nav>
+
+    <script>
+        // App Core Data & LocalStorage Management
+        let habitsData = JSON.parse(localStorage.getItem('habito_data')) || [
+            { id: 1, name: 'Hydrate with water', days: {} },
+            { id: 2, name: '30 min workout', days: {} },
+            { id: 3, name: 'Read 20 pages', days: {} }
+        ];
+
+        let weeklyData = JSON.parse(localStorage.getItem('habito_weekly')) || [
+            { id: 1, name: 'Meal Planning', w1: false, w2: false, w3: false, w4: false },
+            { id: 2, name: 'Try new recipes', w1: false, w2: false, w3: false, w4: false }
+        ];
+
+        function saveData() {
+            localStorage.setItem('habito_data', JSON.stringify(habitsData));
+            localStorage.setItem('habito_weekly', JSON.stringify(weeklyData));
+            updateDashboard();
+        }
+
+        // Tab Switcher
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Initialize Daily Table
+        function initDailyTable() {
+            const theadRow = document.querySelector('#daily-table thead tr');
+            let headerHTML = '<th>Habit Name</th>';
+            for(let i=1; i<=31; i++) headerHTML += `<th>${i}</th>`;
+            theadRow.innerHTML = headerHTML;
+
+            const tbody = document.querySelector('#daily-table tbody');
+            let bodyHTML = '';
+            habitsData.forEach(habit => {
+                bodyHTML += `<tr><td>${habit.name}</td>`;
+                for(let i=1; i<=31; i++) {
+                    const checked = habit.days[i] ? 'checked' : '';
+                    bodyHTML += `<td><input type="checkbox" class="day-checkbox" ${checked} onchange="toggleDay(${habit.id}, ${i}, this.checked)"></td>`;
+                }
+                bodyHTML += `</tr>`;
+            });
+            tbody.innerHTML = bodyHTML;
+        }
+
+        function toggleDay(habitId, day, status) {
+            const habit = habitsData.find(h => h.id === habitId);
+            if(habit) {
+                habit.days[day] = status;
+                saveData();
+            }
+        }
+
+        // Initialize Weekly List
+        function initWeeklyList() {
+            const container = document.getElementById('weekly-list');
+            let html = '';
+            weeklyData.forEach(w => {
+                html += `<div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>${w.name}</span>
+                    <div style="display:flex; gap:10px;">
+                        <label><input type="checkbox" ${w.w1?'checked':''} onchange="toggleWeekly(${w.id}, 'w1', this.checked)"> W1</label>
+                        <label><input type="checkbox" ${w.w2?'checked':''} onchange="toggleWeekly(${w.id}, 'w2', this.checked)"> W2</label>
+                        <label><input type="checkbox" ${w.w3?'checked':''} onchange="toggleWeekly(${w.id}, 'w3', this.checked)"> W3</label>
+                        <label><input type="checkbox" ${w.w4?'checked':''} onchange="toggleWeekly(${w.id}, 'w4', this.checked)"> W4</label>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleWeekly(id, weekKey, status) {
+            const item = weeklyData.find(w => w.id === id);
+            if(item) {
+                item[weekKey] = status;
+                saveData();
+            }
+        }
+
+        // Dashboard Stats & Reminder Checker
+        function updateDashboard() {
+            let totalChecks = 0;
+            let totalPossible = habitsData.length * 31;
+            habitsData.forEach(h => {
+                for(let i=1; i<=31; i++) {
+                    if(h.days[i]) totalChecks++;
+                }
+            });
+            const rate = Math.round((totalChecks / totalPossible) * 100);
+            document.getElementById('completion-rate').innerText = rate + '%';
+            document.getElementById('pending-count').innerText = (totalPossible - totalChecks);
+
+            // Reminder Logic: Show banner if tasks are pending
+            if(rate < 50) {
+                document.getElementById('reminder-banner').style.display = 'block';
+            } else {
+                document.getElementById('reminder-banner').style.display = 'none';
+            }
+        }
+
+        // AI Assistant Logic
+        function sendAIExtMessage() {
+            const input = document.getElementById('chat-input');
+            const chatBox = document.getElementById('chat-box');
+            if(!input.value.trim()) return;
+
+            const userText = input.value;
+            chatBox.innerHTML += `<div class="chat-bubble user">${userText}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            setTimeout(() => {
+                let aiReply = "Bahut badiya! Apne daily habits ko regular rakhein, success zaroor milegi.";
+                const lower = userText.toLowerCase();
+                if(lower.includes('pending') || lower.includes('baaki')) {
+                    aiReply = "Maine check kiya hai, aapke kuch daily targets abhi baaki hain. Unhe aaj hi complete kar lijiye!";
+                } else if(lower.includes('motivation') || lower.includes('tips')) {
+                    aiReply = "Consistency is key! Roz thoda-thoda karke apne goals ki taraf badhein.";
+                }
+                chatBox.innerHTML += `<div class="chat-bubble ai">${aiReply}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 600);
+        }
+
+        // Notes Storage
+        document.getElementById('user-notes').value = localStorage.getItem('habito_notes') || '';
+        function saveNotes() {
+            localStorage.setItem('habito_notes', document.getElementById('user-notes').value);
+        }
+
+        // Initialize App on Load
+        initDailyTable();
+        initWeeklyList();
+        updateDashboard();
+    </script>
+</body>
+</html>
